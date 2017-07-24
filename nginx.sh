@@ -1,7 +1,10 @@
 #!/bin/bash
+
 mkdir -p nginx && cd nginx
 
-apt-get install -y install build-essential autoconf libtool automake git unzip
+pkglist="build-essential autoconf libtool automake unzip"
+for package in ${pkglist}; do
+  apt-get install -y ${package}
 
 id -u www >/dev/null 2>&1
   [ $? -ne 0 ] && useradd -M -s /sbin/nologin www
@@ -16,10 +19,10 @@ openssl_version=1_0_2l
 luajit_version=2.1.0-beta3
 nginx_ct_version=1.3.2
 
-wget -c https://nginx.org/download/nginx-$nginx_version.tar.gz && tar zxf nginx-$nginx_version.tar.gz
-wget -c https://sourceforge.net/projects/pcre/files/pcre/$pcre_version/pcre-$pcre_version.tar.gz && tar zxf pcre-$pcre_version.tar.gz
-wget -c https://github.com/openssl/openssl/archive/OpenSSL_$openssl_version.tar.gz && tar zxf OpenSSL_$openssl_version.tar.gz && mv openssl-OpenSSL_$openssl_version openssl-$openssl_version
-wget -c https://github.com/grahamedgecombe/nginx-ct/archive/v$nginx_ct_version.zip && unzip v$nginx_ct_version.zip
+wget -c https://nginx.org/download/nginx-${nginx_version}.tar.gz && tar zxf nginx-${nginx_version}.tar.gz
+wget -c https://sourceforge.net/projects/pcre/files/pcre/${pcre_version}/pcre-${pcre_version}.tar.gz && tar zxf pcre-${pcre_version}.tar.gz
+wget -c https://github.com/openssl/openssl/archive/OpenSSL_${openssl_version}.tar.gz && tar zxf OpenSSL_${openssl_version}.tar.gz && mv openssl-OpenSSL_${openssl_version} openssl-${openssl_version}
+wget -c https://github.com/grahamedgecombe/nginx-ct/archive/v${nginx_ct_version}.zip && unzip v${nginx_ct_version}.zip
 
 git clone https://github.com/bagder/libbrotli
 cd libbrotli && ./autogen.sh && ./configure
@@ -29,16 +32,16 @@ git clone https://github.com/google/ngx_brotli.git
 cd ngx_brotli && git submodule update --init
 cd ../
 
-wget -c http://luajit.org/download/LuaJIT-$luajit_version.zip && unzip LuaJIT-$luajit_version.zip
-cd LuaJIT-$luajit_version && make && make install && cd ../
+wget -c http://luajit.org/download/LuaJIT-${luajit_version}.zip && unzip LuaJIT-${luajit_version}.zip
+cd LuaJIT-${luajit_version} && make && make install && cd ../
 
 export LUAJIT_LIB=/usr/local/lib
-export LUAJIT_INC=/usr/local/include/luajit-2.1/
+export LUAJIT_INC=/usr/local/include/luajit-2.1
 
 git clone https://github.com/simpl/ngx_devel_kit.git
 git clone https://github.com/openresty/lua-nginx-module.git
 
-cd nginx-$nginx_version
+cd nginx-${nginx_version}
 ./configure --prefix=/usr/local/nginx \
 	--user=www --group=www \
 	--with-http_stub_status_module \
@@ -47,12 +50,12 @@ cd nginx-$nginx_version
 	--with-http_realip_module \
 	--with-http_flv_module \
 	--with-http_mp4_module \
-	--with-openssl=../openssl-$openssl_version \
-	--with-pcre=../pcre-$pcre_version \
+	--with-openssl=../openssl-${openssl_version} \
+	--with-pcre=../pcre-${pcre_version} \
 	--with-pcre-jit \
 	--with-ld-opt="-ljemalloc" \
 	--add-module=../ngx_brotli \
-	--add-module=../nginx-ct-$nginx_ct_version \
+	--add-module=../nginx-ct-${nginx_ct_version} \
 	--add-module=../lua-nginx-module \
 	--add-module=../ngx_devel_kit \
 	--with-ld-opt="-Wl,-rpath,/usr/local/lib/" \

@@ -1,21 +1,15 @@
 #!/bin/bash
-# Author:  Seon <seeuseon AT gmail.com>
-# BLOG:  https://seon.me
 
-jemalloc_version=4.4.0
-THREAD=$(grep 'processor' /proc/cpuinfo | sort -u | wc -l)
+version=5.0.1
 
-wget -c https://github.com/jemalloc/jemalloc/releases/download/$jemalloc_version/jemalloc-$jemalloc_version.tar.bz2
-tar xjf jemalloc-$jemalloc_version.tar.bz2
+apt-get install install build-essential
 
-pushd jemalloc-$jemalloc_version
-./configure
-make -j$THREAD
-make install
+mkdir -p ./jemalloc && cd jemalloc
+wget -c https://github.com/jemalloc/jemalloc/releases/download/{$version}/jemalloc-{$version}.tar.bz2
+tar xjf jemalloc-$version.tar.bz2
+cd jemalloc-$version && ./configure && make -j2 && make install
 
 echo '/usr/local/lib' > /etc/ld.so.conf.d/local.conf
 ldconfig
-popd
-rm -rf jemalloc-$jemalloc_version
-rm -rf jemalloc-$jemalloc_version.tar.bz2
-echo "Jemalloc installed successfully!"
+cd ../ && rm -rf jemalloc
+echo "jemalloc installed successfully! "

@@ -1,10 +1,18 @@
 #!/bin/bash
-# Author: Seon <seeu AT seon.me>
-# Blog: https://seon.me
-#
-# Notes:  Debian
+# Author:  Seon
+# SITE:  https://seon.me/
 
-apt-get update && apt-get install ntpdate -y
+# Swap
+dd if=/dev/zero of=/swapfile count=1024 bs=1M
+mkswap /swapfile
+swapon /swapfile
+chmod 600 /swapfile
+[ -z "`grep swapfile /etc/fstab`" ] && echo '/swapfile    swap    swap    defaults    0 0' >> /etc/fstab
+
+# installed
+apt-get install ntpdate -y
+/etc/init.d/ntp stop
+
 # Custom profile
 cat > /etc/profile.d/debian.sh << EOF
 HISTSIZE=10000
@@ -25,6 +33,9 @@ EOF
 
 sed -i 's@^"syntax on@syntax on@' /etc/vim/vimrc
 
+# history
+[ -z "$(grep history-timestamp ~/.bashrc)" ] && echo "PROMPT_COMMAND='{ msg=\$(history 1 | { read x y; echo \$y; });user=\$(whoami); echo \$(date \"+%Y-%m-%d %H:%M:%S\"):\$user:\`pwd\`/:\$msg ---- \$(who am i); } >> /tmp/\`hostname\`.\`whoami\`.history-timestamp'" >> ~/.bashrc
+
 # /etc/security/limits.conf
 [ -e /etc/security/limits.d/*nproc.conf ] && rename nproc.conf nproc.conf_bk /etc/security/limits.d/*nproc.conf
 [ -z "$(grep 'session required pam_limits.so' /etc/pam.d/common-session)" ] && echo "session required pam_limits.so" >> /etc/pam.d/common-session
@@ -36,6 +47,9 @@ cat >> /etc/security/limits.conf <<EOF
 * soft nofile 65535
 * hard nofile 65535
 EOF
+
+# /etc/hosts
+[ "$(hostname -i | awk '{print $1}')" != "127.0.0.1" ] && sed -i "s@127.0.0.1.*localhost@&\n127.0.0.1 $(hostname)@g" /etc/hosts
 
 # Set timezone
 rm -rf /etc/localtime
@@ -54,7 +68,6 @@ fs.inotify.max_user_instances = 8192
 net.ipv4.tcp_syncookies = 1
 net.ipv4.tcp_fin_timeout = 30
 net.ipv4.tcp_tw_reuse = 1
-net.ipv4.tcp_tw_recycle = 1
 net.ipv4.ip_local_port_range = 1024 65000
 net.ipv4.tcp_max_syn_backlog = 65536
 net.ipv4.tcp_max_tw_buckets = 6000
@@ -65,11 +78,18 @@ net.core.somaxconn = 65535
 net.core.netdev_max_backlog = 262144
 net.ipv4.tcp_timestamps = 0
 net.ipv4.tcp_max_orphans = 262144
+net.core.default_qdisc=fq
+net.ipv4.tcp_congestion_control=bbr
+net.ipv6.conf.all.accept_ra = 1
+net.ipv6.conf.default.accept_ra = 1
+net.ipv6.conf.all.accept_ra = 0
+net.ipv6.conf.default.accept_ra = 0
+net.ipv6.conf.all.accept_redirects = 0
+net.ipv6.conf.default.accept_redirects = 0
 EOF
 sysctl -p
 
-sed -i 's@^ACTIVE_CONSOLES.*@ACTIVE_CONSOLES="/dev/tty[1-2]"@' /etc/default/console-setup
-sed -i 's@^# zh_CN.UTF-8@zh_CN.UTF-8@' /etc/locale.gen
+sed -i 's@^# en_US.UTF-8@en_US.UTF-8@' /etc/locale.gen
 init q
 
 # Update time
@@ -77,8 +97,9 @@ ntpdate pool.ntp.org
 [ ! -e "/var/spool/cron/crontabs/root" -o -z "$(grep ntpdate /var/spool/cron/crontabs/root 2>/dev/null)" ] && { echo "*/20 * * * * $(which ntpdate) pool.ntp.org > /dev/null 2>&1" >> /var/spool/cron/crontabs/root;chmod 600 /var/spool/cron/crontabs/root; }
 
 # iptables
-[ -e "/etc/iptables.up.rules" ] && /bin/mv /etc/iptables.up.rules{,_bk}
 cat > /etc/iptables.up.rules << EOF
+# Firewall configuration written by system-config-securitylevel
+# Manual customization of this file is not recommended.
 *filter
 :INPUT DROP [0:0]
 :FORWARD ACCEPT [0:0]
@@ -86,9 +107,10 @@ cat > /etc/iptables.up.rules << EOF
 :syn-flood - [0:0]
 -A INPUT -i lo -j ACCEPT
 -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
--A INPUT -p tcp -m state --state NEW -m tcp --dport 22 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 9402 -j ACCEPT
 -A INPUT -p tcp -m state --state NEW -m tcp --dport 80 -j ACCEPT
 -A INPUT -p tcp -m state --state NEW -m tcp --dport 443 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 10900 -j ACCEPT
 -A INPUT -p icmp -m limit --limit 1/sec --limit-burst 10 -j ACCEPT
 -A INPUT -f -m limit --limit 100/sec --limit-burst 100 -j ACCEPT
 -A INPUT -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j syn-flood
@@ -97,34 +119,41 @@ cat > /etc/iptables.up.rules << EOF
 -A syn-flood -j REJECT --reject-with icmp-port-unreachable
 COMMIT
 EOF
+
+cat > /etc/ip6tables.up.rules << EOF
+# Firewall configuration written by system-config-securitylevel
+# Manual customization of this file is not recommended.
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:RH-Firewall-1-INPUT - [0:0]
+-A INPUT -j RH-Firewall-1-INPUT
+-A FORWARD -j RH-Firewall-1-INPUT
+-A RH-Firewall-1-INPUT -i lo -j ACCEPT
+-A RH-Firewall-1-INPUT -p icmpv6 -j ACCEPT
+-A RH-Firewall-1-INPUT -m tcp -p tcp --dport 80 -j ACCEPT
+-A RH-Firewall-1-INPUT -m tcp -p tcp --dport 443 -j ACCEPT
+-A RH-Firewall-1-INPUT -j REJECT --reject-with icmp6-adm-prohibited
+-A INPUT --protocol icmpv6 --icmpv6-type echo-request -j ACCEPT --match limit --limit 30/minute
+COMMIT
+EOF
+
 iptables-restore < /etc/iptables.up.rules
+ip6tables-restore < /etc/ip6tables.up.rules
+
 cat > /etc/network/if-pre-up.d/iptables << EOF
 #!/bin/bash
 /sbin/iptables-restore < /etc/iptables.up.rules
 EOF
-#IPv6
-[ -e "/etc/ip6tables.up.rules" ] && /bin/mv /etc/ip6tables.up.rules{,_bk}
-cat > /etc/ip6tables.up.rules << EOF
-*filter
-:INPUT DROP [0:0]
-:FORWARD ACCEPT [0:0]
-:OUTPUT ACCEPT [0:0]
--A INPUT -i lo -j ACCEPT
--A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
--A INPUT -p tcp -m tcp --dport 80 -j ACCEPT
--A INPUT -p tcp -m tcp --dport 443 -j ACCEPT
--A INPUT -p ipv6-icmp -j ACCEPT
--A INPUT -j DROP
-COMMIT
-EOF
-ip6tables-restore < /etc/ip6tables.up.rules
+
 cat > /etc/network/if-pre-up.d/ip6tables << EOF
 #!/bin/bash
 /sbin/ip6tables-restore < /etc/ip6tables.up.rules
 EOF
+
 chmod +x /etc/network/if-pre-up.d/iptables
 chmod +x /etc/network/if-pre-up.d/ip6tables
-service ssh restart
 
 . /etc/profile
-echo "Configuration successfully"
+. ~/.bashrc
