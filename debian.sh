@@ -107,10 +107,9 @@ cat > /etc/iptables.up.rules << EOF
 :syn-flood - [0:0]
 -A INPUT -i lo -j ACCEPT
 -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
--A INPUT -p tcp -m state --state NEW -m tcp --dport 9402 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 22 -j ACCEPT
 -A INPUT -p tcp -m state --state NEW -m tcp --dport 80 -j ACCEPT
 -A INPUT -p tcp -m state --state NEW -m tcp --dport 443 -j ACCEPT
--A INPUT -p tcp -m state --state NEW -m tcp --dport 10900 -j ACCEPT
 -A INPUT -p icmp -m limit --limit 1/sec --limit-burst 10 -j ACCEPT
 -A INPUT -f -m limit --limit 100/sec --limit-burst 100 -j ACCEPT
 -A INPUT -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j syn-flood
