@@ -131,6 +131,32 @@ endscript
 }
 EOF
 
+mkdir /usr/local/apache/conf/vhost
+cat > /usr/local/apache/conf/vhost/0.conf << EOF
+<VirtualHost *:9080>
+ServerAdmin info@seon.me
+DocumentRoot "/data/wwwroot/default"
+ServerName 127.0.0.1
+ErrorLog "/data/wwwlogs/error_apache.log"
+CustomLog "/data/wwwlogs/access_apache.log" common
+<Directory "/data/wwwroot/default">
+SetOutputFilter DEFLATE
+Options FollowSymLinks ExecCGI
+Require all granted
+AllowOverride All
+Order allow,deny
+Allow from all
+DirectoryIndex index.html index.php
+</Directory>
+<Location /server-status>
+SetHandler server-status
+Order Deny,Allow
+Deny from all
+Allow from 127.0.0.1
+</Location>
+</VirtualHost>
+EOF
+
 cat >> /usr/local/apache/conf/httpd.conf <<EOF
 <IfModule mod_headers.c>
 AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml text/javascript
