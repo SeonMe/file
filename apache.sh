@@ -54,7 +54,7 @@ fi
 # Httpd
 wget -c http://www-eu.apache.org/dist//apr/apr-${apr_version}.tar.gz && tar zxf apr-${apr_version}.tar.gz
 sed -i 's@$RM "$cfgfile"@$RM -f "$cfgfile"@' apr-${apr_version}/configure
-wget -c http://www-eu.apache.org/dist//apr/apr-util-${apr_util_version}.tar.gz && tar zxf apr-${apr_util_version}.tar.gz
+wget -c http://www-eu.apache.org/dist//apr/apr-util-${apr_util_version}.tar.gz && tar zxf apr-util-${apr_util_version}.tar.gz
 wget -c http://www-us.apache.org/dist//httpd/httpd-${httpd_version}.tar.gz && tar zxf httpd-${httpd_version}.tar.gz
 cd httpd-${httpd_version}
 [ ! -d "/usr/local/apache" ] && mkdir -p /usr/local/apache
