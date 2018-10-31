@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+
+USE_PROCD=1
+
+# starts before dnsmasq starts
+START=21
+# stops before networking stops
+STOP=40
+
+PROG=/opt/v2ray/v2ray
+CONFIGFILE=/opt/v2ray/config/use-all.json
+
+start_service() {
+        procd_open_instance
+        procd_set_param command "$PROG" -config "$CONFIGFILE"
+        procd_set_param file "$CONFIGFILE"
+        procd_set_param respawn
+        procd_close_instance
+}
